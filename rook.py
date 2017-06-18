@@ -1,82 +1,11 @@
 import random
 import itertools
+from rooklib import *
 from RookCards import Card, Hand
 from colorama import init, Fore, Back, Style
 
-def suit(card):
-    return card.split(':')[1]
 
-def number(card):
-    return card.split(':')[0]
 
-def number_int(card):
-    return int(card.split(':')[0])
-
-def bid_round(x, base=5):
-    return int(base * round(float(x)/base))
-    # Credit: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python @ Alok Singhal Retrieved 6/3/2017 10:51 PM EDT
-    
-def suits_in_hand(hand):
-    suits = list()
-    for card in hand:
-        suits.append(Card(card).suit)
-    if suits.count('ROOK') > 0:
-        suits.remove('ROOK')
-    return suits, list(set(suits))    
-def hand_value(list):
-    hand_checker = " ".join(list)
-    current_bid = float(0.0)
-    current_bid += 40 # for partner
-    current_bid += 10 # for nest
-                   
-    if hand_checker.count("ROOK") == 1:
-        current_bid +=35
-
-    for color in colors:
-        if '15:'+color in list:
-            current_bid += 25
-        if hand_checker.count(color) == 0:
-            current_bid +=20
-        if hand_checker.count(color) == 1:
-            current_bid +=7
-            if '14:'+color in list:
-                current_bid -= 13
-            if '10:'+color in list:
-                current_bid -= 11                
-            if '5:'+color in list:
-                current_bid -= 5
-        if hand_checker.count(color) > 3:
-            current_bid += 10
-            if hand_checker.count(color) > 4:
-                current_bid += 10
-                if hand_checker.count(color) > 5:
-                    current_bid += 10
-                    if hand_checker.count(color) > 6:
-                        current_bid += 10
-                        if hand_checker.count(color) > 7:
-                            current_bid += 180
- 
-    for card in list:
-        checker = card.split(':')[0]
-        if checker == '6':
-            current_bid -= 2
-        if checker == '7':
-            current_bid -= 1.5                    
-        if checker == '8':
-            current_bid -= 1
-        if checker == '9':
-            current_bid -= .5
-        if checker == '10':
-            current_bid += 1
-        if checker == '11':
-            current_bid += 2
-        if checker == '12':
-            current_bid += 3
-        if checker == '13':
-            current_bid += 5
-        if checker == '14':
-            current_bid += 10
-    return current_bid  
 cards = ['5','6','7','8','9','10','11','12','13','14','15']
 colors = ['GREEN','RED','BLACK','YELLOW']
 optimization = False
@@ -84,9 +13,10 @@ init()
 for i in range(1,100):
     rounds_played = 0
     player_scores = [0,0,0,0]
-    dealer=3
+    dealer=random.randint(0,3)
     while 1:
         partner_card = None
+        partner_is_self = False
         del partner_card
         teams = [[-1,-1],[-1,-1]]
         dealer +=1
@@ -109,7 +39,7 @@ for i in range(1,100):
         for card in cards:
             for color in colors:
                 deck.append(card+':'+color)
-                
+
         random.shuffle(deck)
 
         for i in range(0,4):
@@ -130,13 +60,13 @@ for i in range(1,100):
             deck.pop(0)
             hands[3].append(deck[0])
             deck.pop(0)
-        
+
         for i in range(0,4):
             current_bid = hand_value(hands[i])
             current_bid = bid_round(int(current_bid))
             if current_bid > 180:
                 current_bid = 180
-                
+
             bids.append(current_bid)
         bid_winner = dealer
         bid_incrementer = dealer
@@ -174,15 +104,15 @@ for i in range(1,100):
                     if power == 15:
                        powers[index] += 25
                     elif power == 14:
-                       powers[index] += 15 
+                       powers[index] += 15
                     elif power == 13:
-                       powers[index] += 10                 
+                       powers[index] += 10
                     elif power == 12:
                        powers[index] += 5
                     elif power == 10:
                        powers[index] += 10
         trump = colors[powers.index(max(powers))]
-               
+
         new_hand = []
         junk = []
         for card in hands[last_taken]:
@@ -201,11 +131,11 @@ for i in range(1,100):
                 break
         combos = itertools.combinations(junk, 10-len(new_hand))
         combos_list = list()
-        combols = list()    
+        combols = list()
         for combo in combos:
             combos_list.append(int(hand_value(new_hand+list(combo))))
             combols.append(list(combo))
-        
+
         new_index = combos_list.index(max(combos_list))
         hand_finder = list(new_hand + combols[combos_list.index(max(combos_list))])
         hand_checker = " ".join(hand_finder)
@@ -227,23 +157,35 @@ for i in range(1,100):
                             if not hand_checker.find('15:'+suit) > -1:
                                 partner_card = '15:'+suit
                                 break
-                                
-                            
+
+
                 else: partner_card = '14:'+trump
             else:
                 partner_card = '15:'+trump
-                    
+
         else:
             partner_card = '16:ROOK'
-            
+
         suit_required =''
         rounds_played += 1
-        for hand in hands:
-            if partner_card in hand:
-                teams[0][1] = hands.index(hand)
-        teams[1]=[0,1,2,3]
-        teams[1].remove(teams[0][0])
-        teams[1].remove(teams[0][1])
+        if partner_card == True:
+            partner_card = '16:ROOK'
+        if hand_checker.find(partner_card) > -1:
+            partner_is_self = True
+            teams[0]=[last_taken]
+            teams[1] = [0,1,2,3]
+            teams[1].remove(last_taken)
+        else:
+            for hand in hands:
+                if partner_card in hand:
+                    teams[0][1] = hands.index(hand)
+            teams[1]=[0,1,2,3]
+            try:
+                teams[1].remove(teams[0][0])
+                teams[1].remove(teams[0][1])
+            except:
+                print(hand_checker)
+                input(partner_card)
 
         for trick in range(0,len(hands[last_taken])):
             hand_table = ['','','','']
@@ -256,13 +198,13 @@ for i in range(1,100):
                     partner_suit = trump
                 if '10:'+partner_suit in hands[last_taken]:
                     played_card = '10:'+partner_suit
-                    
+
                 else:
                     for jokar in range(14,4,-1):
                         print(str(jokar)+':'+partner_suit)
                         if str(jokar)+':'+partner_suit in hands[last_taken]:
-                            played_card = str(jokar)+':'+partner_suit                 
-            else:        
+                            played_card = str(jokar)+':'+partner_suit
+            else:
                 played_card = hands[last_taken][0]
             #print(played_card)
             table.append(played_card)
@@ -280,10 +222,10 @@ for i in range(1,100):
                 hands_left = [3,0,1]
             elif last_taken == 3:
                 hands_left = [0,1,2]
-            for player in hands_left:     
+            for player in hands_left:
                 hand_checker = " ".join(hands[player])
-                if hand_checker.find(suit_required) > -1 or (suit_required==trump and hand_checker.find('ROOK') > -1):            
-                    while 1:          
+                if hand_checker.find(suit_required) > -1 or (suit_required==trump and hand_checker.find('ROOK') > -1):
+                    while 1:
                         random.shuffle(hands[player])
                         played_card = hands[player][0]
                         suit_attempt = played_card.split(':')[1]
@@ -297,7 +239,7 @@ for i in range(1,100):
                     played_card = hands[player][0]
                     table.append(played_card)
                     hand_table[player] = played_card
-                    
+
                     hands[player].pop(0)
             current_winner = last_taken
             winning_card = Card(hand_table[last_taken])
@@ -308,7 +250,7 @@ for i in range(1,100):
                     if winning_card.suit == trump or winning_card.is_rook():
                         if winning_card.int < card.int:
                             current_winner = hand_table.index(card.string())
-                            winning_card = card          
+                            winning_card = card
                 elif suit_attempt == suit_required:
                     if winning_card.suit == trump or winning_card.is_rook():
                         continue
@@ -316,17 +258,13 @@ for i in range(1,100):
                             current_winner = hand_table.index(card.string())
                             winning_card = card
             last_taken = current_winner
-            for card in hand_table:
-                taken_hands[current_winner].append(card)
+            taken_hands[current_winner] += hand_table
         taken_hands[current_winner] += nest
         round_scores = [0,0,0,0]
         for hand in taken_hands:
-            Hand(hand).print()
-            points_total = 0
-            for card in hand:
-                points_total += Card(card).points()
-                #print(str(Card(card).points())+' - '+Card(card).string())
-            round_scores[taken_hands.index(hand)] += points_total
+            round_scores[taken_hands.index(hand)] += Hand(hand).total_points()
+        print(teams)
+        print(partner_is_self)
         for team in teams:
             team_value = 0
             for member in team:
@@ -334,12 +272,10 @@ for i in range(1,100):
             for member in team:
                 player_scores[member] += team_value
                 print(team_value)
-            #input()
+        if partner_is_self:
+            input()            
         if max(player_scores) >= 500:
             #print("Winner is Player "+str(player_scores.index(max(player_scores))))
             #print(max(player_scores))
             #print(rounds_played)
             break
-    
-
-
